@@ -1,35 +1,55 @@
 <?php
 
- function __construct()
+public function __construct()
 {
-	$routes = require_once SITE_ROOT.'/App/routes.php';
-	foreach ($routes as $key => $route) {
-		$this->merge_routes($route, false, $key);
+	$routes = require_once config('app', 'app_routes');
+	$this->filter = new Filter();
+
+	foreach ($routes as $route) {
+		$this->parentRoute = '';
+		$this->merge_routes($route, true);
 	}
+
 }
 
- function merge_routes($routes, $child = false, $component = false) {
-	if ( $component ) {
-		$this->component = $component;
+private function merge_routes($route, $parent = [])
+{
+	$this->filter->transform($route);
+
+	if ( $parent ) {
+		$this->parentChild = $route['child'] ?? [];
+		$this->parentPermission = $route['permission'];
 	}
-	foreach ($routes as $key => $route) {
-		if ( is_array($route) ) {
-			if ($key !== 'child' && $key !== 'permission' && !is_int($key)) {
-				$route['component'] = $this->component;
-				if ( key_exists('child', $route) ) {
-					if ( $child ) {
-						$this->parentKey .= $key;
-					} else {
-						$this->parentKey = $key;
-					}
-					$child = $route['child'];
-					unset($route['child']);
-					$this->routes[$this->parentKey] = $route;
-					$this->merge_routes($child, true);
-				} else {
-					$this->routes[$this->parentKey.$key] = $route;
-				}
-			}
+
+	if ( !$route['permission'] ){
+		$route['permission'] = [];
+	} elseif ( !isset($this->parentRoute['permission']) ) {
+		$this->parentRoute['permission'] = $route['permission'];
+	};
+
+	if ( isset($route['permission']) &&  isset($this->parentRoute['permission']) ) {
+		$route['permission'] =  $this->parentRoute['permission'] = array_unique(array_merge($this->parentRoute['permission'], $route['permission']));
+	}
+
+	if ( isset($this->parentChild[0]) && $route['path'] === $this->filter->url($this->parentChild[0]['path']) ) {
+		$route['permission'] = $this->parentPermission;
+		$this->parentRoute = $route;
+		$url = $this->parentRoute['path'];
+		$this->routes[$url] = $this->parentRoute;
+		array_shift($this->parentChild);
+	} elseif ( $route['path'] && $route['obj'] ) {
+		$this->parentRoute['path'] = $url = $this->parentRoute['path'].$route['path'];
+		$this->routes[$url]['path'] = $this->parentRoute['path'];
+	}
+
+	if ( key_exists('child', $route) ) {
+
+		if ( isset($url) ) {
+			unset($this->routes[$url]['child']);
+		}
+
+		foreach ($route['child'] as $key => $child) {
+			$this->merge_routes($child);
 		}
 	}
 }
