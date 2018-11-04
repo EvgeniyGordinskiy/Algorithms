@@ -13,4 +13,3 @@ function mb_str_pad($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT, $encod
     $after = $padAfter ? mb_substr($repeatedString, 0, ceil($targetLen), $encoding) : '';
     return $before . $str . $after;
 }
-?>
