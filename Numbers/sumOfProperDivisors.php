@@ -13,8 +13,7 @@ function divFind($num)
             if ($i === $num / $i) {
                 $result[] = $i;
             } else {
-                $result[] = $i;
-                $result[] = $num /$i;
+                array_push($result, $i, $num /$i);
             }
         }
     }
